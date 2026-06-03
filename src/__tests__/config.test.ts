@@ -344,6 +344,29 @@ describe('Config', () => {
       await expect(buildConfig()).rejects.toThrow(/exclude-tags.*ReDoS-prone/)
     })
 
+    it('skips regex safety checks when skip-regex-checks is enabled', async () => {
+      // A ReDoS-prone pattern that would normally be rejected must pass
+      // through untouched when the author opts out via skip-regex-checks.
+      process.env.GITHUB_REPOSITORY = 'test-owner/test-repo'
+      mockGetInput.mockImplementation((name: string) => {
+        const inputs: Record<string, string> = {
+          token: 'test-token',
+          'delete-tags': '(a+)+$',
+          'use-regex': 'true',
+          'skip-regex-checks': 'true'
+        }
+        return inputs[name] || ''
+      })
+      mockGetBooleanInput.mockImplementation(
+        (name: string) => name === 'use-regex' || name === 'skip-regex-checks'
+      )
+
+      const config = await buildConfig()
+      expect(config.useRegex).toBe(true)
+      expect(config.skipRegexChecks).toBe(true)
+      expect(config.deleteTags).toBe('(a+)+$')
+    })
+
     it('does NOT validate delete-tags as regex when use-regex is false', async () => {
       // Without use-regex, delete-tags is a wildcard pattern, not a regex,
       // so the (a+)+ string is a literal — must not be rejected.

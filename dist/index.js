@@ -55573,6 +55573,7 @@ class Config {
     validate;
     logLevel;
     useRegex;
+    skipRegexChecks;
     token = '';
     registryUrl;
     githubApiUrl;
@@ -55736,10 +55737,15 @@ async function buildConfig() {
     if (getInput('use-regex')) {
         config.useRegex = getBooleanInput('use-regex');
     }
+    if (getInput('skip-regex-checks')) {
+        config.skipRegexChecks = getBooleanInput('skip-regex-checks');
+    }
     // When regex mode is on, validate every user-supplied pattern up front
     // so a ReDoS-prone or absurdly long pattern fails fast with a clear
-    // message rather than burning workflow minutes inside `.test()`.
-    if (config.useRegex) {
+    // message rather than burning workflow minutes inside `.test()`. The
+    // skip-regex-checks escape hatch lets a workflow author who deliberately
+    // needs a very large/complex pattern opt out of these guards.
+    if (config.useRegex && !config.skipRegexChecks) {
         if (config.deleteTags) {
             validateUserRegex(config.deleteTags, 'delete-tags');
         }
@@ -55832,6 +55838,9 @@ async function buildConfig() {
     optionsMap.add('log-level', LogLevel[config.logLevel]);
     if (config.useRegex !== undefined) {
         optionsMap.add('use-regex', `${config.useRegex}`);
+    }
+    if (config.skipRegexChecks !== undefined) {
+        optionsMap.add('skip-regex-checks', `${config.skipRegexChecks}`);
     }
     if (config.registryUrl !== undefined) {
         optionsMap.add('registry-url', `${config.registryUrl}`);
