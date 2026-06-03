@@ -38,6 +38,7 @@ export class Config {
   validate?: boolean
   logLevel: LogLevel
   useRegex?: boolean
+  skipRegexChecks?: boolean
   token = ''
   registryUrl?: string
   githubApiUrl?: string
@@ -220,10 +221,16 @@ export async function buildConfig(): Promise<Config> {
     config.useRegex = core.getBooleanInput('use-regex')
   }
 
+  if (core.getInput('skip-regex-checks')) {
+    config.skipRegexChecks = core.getBooleanInput('skip-regex-checks')
+  }
+
   // When regex mode is on, validate every user-supplied pattern up front
   // so a ReDoS-prone or absurdly long pattern fails fast with a clear
-  // message rather than burning workflow minutes inside `.test()`.
-  if (config.useRegex) {
+  // message rather than burning workflow minutes inside `.test()`. The
+  // skip-regex-checks escape hatch lets a workflow author who deliberately
+  // needs a very large/complex pattern opt out of these guards.
+  if (config.useRegex && !config.skipRegexChecks) {
     if (config.deleteTags) {
       validateUserRegex(config.deleteTags, 'delete-tags')
     }
@@ -324,6 +331,9 @@ export async function buildConfig(): Promise<Config> {
 
   if (config.useRegex !== undefined) {
     optionsMap.add('use-regex', `${config.useRegex}`)
+  }
+  if (config.skipRegexChecks !== undefined) {
+    optionsMap.add('skip-regex-checks', `${config.skipRegexChecks}`)
   }
 
   if (config.registryUrl !== undefined) {
